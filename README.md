@@ -15,7 +15,7 @@ int main()
 
         start_drawing();
 
-        draw_rect_centered(get_screen_center(), (vec2){100, 100}, (color){0, 255, 255, 255});
+        draw_rect_centered(get_screen_center(), (vec2){100, 100}, COLOR_RED);
 
         end_drawing();
     }
