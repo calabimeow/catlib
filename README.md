@@ -1,5 +1,5 @@
 # catlib
-Simple graphics library
+Simple single header graphics library
 
 Basic program example:
 ```c
