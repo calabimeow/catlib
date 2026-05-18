@@ -19,9 +19,9 @@ int main()
 
     while (!window_should_close())
     {
-        clear_color(COLOR_BLUE);
-
         start_drawing();
+
+        clear_color(COLOR_BLUE);
 
         draw_rect_centered(get_screen_center(), (vec2){100, 100}, COLOR_RED);
 
