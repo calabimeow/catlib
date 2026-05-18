@@ -7,6 +7,8 @@ Features:
 
 -Written in C with snake_case
 
+-Texture support
+
 -Open sourced
 
 Basic program example:
