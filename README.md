@@ -2,8 +2,11 @@
 Simple 2D programming library for game dev
 
 Features:
+
 -No external dependencies
+
 -Written in C with snake_case
+
 -Open sourced
 
 Basic program example:
