@@ -1,5 +1,5 @@
 # catlib
-Simple single header graphics library
+Simple 2D programming library for game dev
 
 Basic program example:
 ```c
