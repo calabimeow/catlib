@@ -37,3 +37,6 @@ int main()
     return 0;
 }
 ```
+Run this command when compiling:
+gcc main -o main -I"[path_to_header]" -L"[path_to_dll]" -lcatlib
+
