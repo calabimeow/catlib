@@ -39,6 +39,6 @@ int main()
 ```
 Run this command when compiling:
 ```make
-gcc main -o main -I"path_to_header" -L"path_to_dll" -lcatlib
+gcc main.c -o main -I"path_to_header" -L"path_to_dll" -lcatlib
 ```
 
