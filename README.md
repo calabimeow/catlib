@@ -27,7 +27,7 @@ int main()
     {
         start_drawing();
 
-        clear_color(COLOR_BLUE);
+        clear_bg(COLOR_BLUE);
 
         draw_rect_centered(get_screen_center(), (vec2){100, 100}, COLOR_RED);
 
