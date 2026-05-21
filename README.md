@@ -9,6 +9,10 @@ Features:
 
 -Texture support
 
+-Sound support
+
+-Custom shaders support
+
 -Open sourced
 
 Basic program example:
