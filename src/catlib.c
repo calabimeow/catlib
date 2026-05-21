@@ -53,7 +53,7 @@ static double lastFrameTime = 0.0f;
 
 static ma_engine audioEngine = {0};
 
-static const char* textureVertShader = 
+static const char *textureVertShader = 
     "#version 330 core\n"
     "layout (location = 0) in vec2 aPos;\n"
     "layout (location = 1) in vec2 aTexCoord;\n"
@@ -81,7 +81,7 @@ static const char* textureVertShader =
         "TexCoord = aTexCoord;\n"
     "}\0";
 
-static const char* textureFragShader = 
+static const char *textureFragShader = 
     "#version 330 core\n"
     "out vec4 FragColor;\n"
     "in vec2 TexCoord;\n"
@@ -132,7 +132,9 @@ static void scroll_callback(GLFWwindow *window, double xoffset, double yoffset)
     mouseScrollY = yoffset;
 }
 
-//WINDOW
+//----------------
+//Window
+//----------------
 void init_window(int width, int height, const char *name)
 {
     windowClosed = false;
@@ -196,7 +198,8 @@ void toggle_fullscreen()
 bool window_should_close()
 {
     if (windowClosed) return true;
-    return glfwWindowShouldClose(window);  
+    if (is_key_pressed(KEY_ESCAPE)) return true;
+    return glfwWindowShouldClose(window);
 }
 
 int get_screen_width(){return windowWidth;}
@@ -217,8 +220,9 @@ void set_window_size(int width, int height)
 
 void set_window_size(int width, int height);
 
-//FRAMES
-
+//----------------
+//Frames
+//----------------
 static void update_fps()
 {
     double currentTime = glfwGetTime();
@@ -244,7 +248,9 @@ CATAPI float get_frame_time()
     return deltaTime;
 }
 
-//BUTTONS
+//----------------
+//Buttons
+//----------------
 bool is_key_pressed(int key)
 {
     return keysPressed[key] && !keysPressedPrevious[key];
@@ -260,7 +266,9 @@ bool is_key_released(int key)
     return !keysPressed[key] && keysPressedPrevious[key];
 }
 
-//MOUSE
+//----------------
+//Mouse
+//----------------
 vec2 get_mouse_pos()
 {
     double x, y;
@@ -308,7 +316,9 @@ vec2 get_mouse_wheel()
     return (vec2){mouseScrollX, mouseScrollY};
 }
 
-//DRAWING
+//----------------
+//Drawing
+//----------------
 
 static void init_drawing()
 {
@@ -378,7 +388,7 @@ void end_drawing()
     glfwSwapBuffers(window);
 }
 
-void clear_color(color col)
+void clear_bg(color col)
 {
     color normalizedColor = color_to_float(col);
     glClearColor(normalizedColor.r, normalizedColor.g, normalizedColor.b, normalizedColor.a);
@@ -553,7 +563,9 @@ void draw_line_angled(vec2 start, vec2 end, float angle, float thick, color col)
     draw_shape(verts, 4, col);
 }
 
-//CAMERA
+//----------------
+//Camera
+//----------------
 void start_2D(camera2D cam)
 {
     currentCam = cam;
@@ -564,7 +576,9 @@ void end_2D()
     currentCam = (camera2D){{0, 0}, 1.0f};
 }
 
-//COLOR
+//----------------
+//Color
+//----------------
 color color_to_float(color col) {return (color){col.r / 255.0f, col.g / 255.0f, col.b / 255.0f, col.a / 255.0f};}
 color color_to_int(color col) {return (color){col.r * 255.0f, col.g * 255.0f, col.b * 255.0f, col.a * 255.0f};}
 
@@ -579,7 +593,9 @@ color color_lerp(color start, color end, float amount)
     };
 }
 
-//SHADERS
+//----------------
+//Shaders
+//----------------
 shader load_shader(const char *vertPath, const char *fragPath)
 {
     FILE *vertFile = fopen(vertPath, "r");
@@ -635,7 +651,9 @@ void use_shader(shader shader)
     glUseProgram(shader.id);
 }
 
-//TEXTURE
+//----------------
+//Textures
+//----------------
 
 static void init_texture_system()
 {
@@ -794,7 +812,9 @@ vec2 get_rect_center(rect rec)
     return (vec2){rec.x + rec.width / 2.0f, rec.y + rec.height / 2.0f};
 }
 
-//COLLISIONS
+//----------------
+//Collisions
+//----------------
 bool check_collision_recs(rect rec1, rect rec2)
 {
     return
@@ -894,4 +914,11 @@ void stop_sound(sound snd)
 {
     ma_sound_stop(snd.sound);
     snd.playing = false;
+}
+
+void resume_sound(sound snd)
+{
+    if (!snd.loaded) return; 
+    ma_sound_start(snd.sound);
+    snd.playing = true;
 }

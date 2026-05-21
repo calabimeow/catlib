@@ -7,6 +7,9 @@
 #include <string.h>
 #include "miniaudio.h"
 
+#define CATLIB_VERSION_MAJOR 0
+#define CATLIB_VERSION_MINOR 1
+
 #if defined(_WIN32) || defined(__CYGWIN__)
     #ifdef CATLIB_BUILD
         #define CATAPI __declspec(dllexport)
@@ -177,7 +180,7 @@ CATAPI vec2 get_mouse_wheel();
 //----------------
 CATAPI void start_drawing();
 CATAPI void end_drawing();
-CATAPI void clear_color(color col);
+CATAPI void clear_bg(color col);
 
 CATAPI void draw_shape(vec2 verts[], int vertCount, color col);
 CATAPI void draw_shape_lines(vec2 verts[], int vertCount, float thick, color col);
@@ -257,6 +260,7 @@ CATAPI sound load_sound(const char *path);
 CATAPI void unload_sound(sound snd);
 CATAPI void play_sound(sound snd);
 CATAPI void stop_sound(sound snd);
+CATAPI void resume_sound(sound snd);
 
 #ifdef __cplusplus
 }
