@@ -8,7 +8,7 @@
 
 #define CATLIB_VERSION_MAJOR 0
 #define CATLIB_VERSION_MINOR 1
-#define CATLIB_VERSION_PATCH 1
+#define CATLIB_VERSION_PATCH 0
 
 #if defined(_WIN32) || defined(__CYGWIN__)
     #ifdef CATLIB_BUILD
