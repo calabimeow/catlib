@@ -5,10 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "miniaudio.h"
 
 #define CATLIB_VERSION_MAJOR 0
 #define CATLIB_VERSION_MINOR 1
+#define CATLIB_VERSION_PATCH 1
 
 #if defined(_WIN32) || defined(__CYGWIN__)
     #ifdef CATLIB_BUILD
@@ -65,6 +65,9 @@ typedef struct texture
     int height;
     int channels;
 }texture;
+
+typedef struct ma_sound ma_sound;
+typedef struct ma_engine ma_engine;
 
 typedef struct sound
 {
