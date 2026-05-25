@@ -47,7 +47,6 @@ vec2 vec2_div(vec2 v1, vec2 v2)
         v2.x == 0 ? 0 : v1.x / v2.x,
         v2.y == 0 ? 0 : v1.y / v2.y
     };
-    return (vec2){v1.x / v2.x, v1.y / v2.y};
 }
 
 vec2 vec2_scale(vec2 v, float value)
@@ -58,12 +57,28 @@ vec2 vec2_scale(vec2 v, float value)
 vec2 vec2_normalize(vec2 v)
 {
     float length = vec2_length(v);
-    return (vec2) {v.x / length, v.x / length};
+    if (length == 0.0f) return (vec2){0, 0};
+    return (vec2) {v.x / length, v.y / length};
 }
 
 vec2 vec2_negate(vec2 v)
 {
     return (vec2){-v.x, -v.y};
+}
+
+vec2 vec2_dir(vec2 v1, vec2 v2)
+{
+    return vec2_sub(v2, v1);
+}
+
+vec2 angle_to_vec2(float angle)
+{
+    return (vec2){cosf(angle), sinf(angle)};
+}
+
+float vec2_to_angle(vec2 v)
+{
+    return atan2f(v.y, v.x);
 }
 
 float vec2_dot(vec2 v1, vec2 v2)
@@ -130,17 +145,13 @@ vec3 vec3_scale(vec3 v, float value)
 vec3 vec3_normalize(vec3 v)
 {
     float length = vec3_length(v);
-    return (vec3) {v.x / length, v.x / length, v.z / length};
+    if (length == 0.0f) return (vec3){0, 0, 0};
+    return (vec3) {v.x / length, v.y / length, v.z / length};
 }
 
 vec3 vec3_negate(vec3 v)
 {
     return (vec3){-v.x, -v.y, -v.z};
-}
-
-float vec3_dot(vec3 v1, vec3 v2)
-{
-    return (v1.x * v2.x) + (v1.y * v2.y) + (v1.z * v2.z);
 }
 
 vec3 vec3_cross(vec3 v1, vec3 v2)
@@ -149,9 +160,20 @@ vec3 vec3_cross(vec3 v1, vec3 v2)
     {
         v1.y * v2.z - v1.z * v2.y,
         v1.z * v2.x - v1.x * v2.z,
-        v1.x * v2.y - v1.y * v2.z
+        v1.x * v2.y - v1.y * v2.x
     };
 }
+
+vec3 vec3_dir(vec3 v1, vec3 v2)
+{
+    return vec3_sub(v2, v1);
+}
+
+float vec3_dot(vec3 v1, vec3 v2)
+{
+    return (v1.x * v2.x) + (v1.y * v2.y) + (v1.z * v2.z);
+}
+
 
 float vec3_length(vec3 v)
 {

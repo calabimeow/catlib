@@ -14,6 +14,10 @@ CATAPI vec2 vec2_div(vec2 v1, vec2 v2);
 CATAPI vec2 vec2_scale(vec2 v, float value);
 CATAPI vec2 vec2_normalize(vec2 v);
 CATAPI vec2 vec2_negate(vec2 v);
+CATAPI vec2 vec2_dir(vec2 v1, vec2 v2);
+CATAPI vec2 angle_to_vec2(float angle);
+
+CATAPI float vec2_to_angle(vec2 v);
 CATAPI float vec2_dot(vec2 v1, vec2 v2);
 CATAPI float vec2_cross(vec2 v1, vec2 v2);
 CATAPI float vec2_length(vec2 v);
@@ -27,8 +31,10 @@ CATAPI vec3 vec3_div(vec3 v1, vec3 v2);
 CATAPI vec3 vec3_scale(vec3 v, float value);
 CATAPI vec3 vec3_normalize(vec3 v);
 CATAPI vec3 vec3_negate(vec3 v);
-CATAPI float vec3_dot(vec3 v1, vec3 v2);
 CATAPI vec3 vec3_cross(vec3 v1, vec3 v2);
+CATAPI vec3 vec3_dir(vec3 v1, vec3 v2);
+
+CATAPI float vec3_dot(vec3 v1, vec3 v2);
 CATAPI float vec3_length(vec3 v);
 CATAPI float vec3_dist(vec3 v1, vec3 v2);
 

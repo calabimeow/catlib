@@ -563,6 +563,11 @@ void draw_line_angled(vec2 start, vec2 end, float angle, float thick, color col)
     draw_shape(verts, 4, col);
 }
 
+void draw_pixel(vec2 pos, color col)
+{
+    draw_rect(pos, (vec2){1, 1}, col);
+}
+
 //----------------
 //Camera
 //----------------
@@ -655,7 +660,7 @@ void use_shader(shader shader)
 //Textures
 //----------------
 
-static void init_texture_system()
+static void init_texture()
 {
     if (textureInit) return;
     
@@ -714,7 +719,7 @@ static void init_texture_system()
 
 texture load_texture(const char *path)
 {
-    init_texture_system();
+    init_texture();
     
     texture tex = {0};
 
@@ -727,8 +732,8 @@ texture load_texture(const char *path)
     
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     
     GLenum format;
     if (tex.channels == 1) format = GL_RED;
@@ -754,7 +759,7 @@ void draw_texture(texture tex, vec2 pos, vec2 size, color tint)
 {
     if (tex.id == 0) return;
         
-    init_texture_system();
+    init_texture();
     use_shader(defaultTextureShader);
     
     int screenSizeLoc = glGetUniformLocation(defaultTextureShader.id, "screenSize");

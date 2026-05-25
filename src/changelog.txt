@@ -1,0 +1,5 @@
+Version 0.1.1
+    -Added draw_pixel function
+    -Fixed a bug in texture filtering mode that caused blurry images
+    -Added angle_to_vec2 and vec2_to_angle functions
+    -Fixed bugs in vector math

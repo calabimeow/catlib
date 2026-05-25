@@ -8,7 +8,7 @@
 
 #define CATLIB_VERSION_MAJOR 0
 #define CATLIB_VERSION_MINOR 1
-#define CATLIB_VERSION_PATCH 0
+#define CATLIB_VERSION_PATCH 1
 
 #if defined(_WIN32) || defined(__CYGWIN__)
     #ifdef CATLIB_BUILD
@@ -195,6 +195,7 @@ CATAPI void draw_circle(vec2 pos, float rad, int segments, color col);
 CATAPI void draw_circle_lines(vec2 pos, float rad, int segments, float thick, color col);
 CATAPI void draw_line(vec2 start, vec2 end, float thick, color col);
 CATAPI void draw_line_angled(vec2 start, vec2 end, float angle, float thick, color col);
+CATAPI void draw_pixel(vec2 pos, color col);
 
 //----------------
 //Camera
