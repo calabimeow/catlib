@@ -7,8 +7,8 @@
 #include <string.h>
 
 #define CATLIB_VERSION_MAJOR 0
-#define CATLIB_VERSION_MINOR 1
-#define CATLIB_VERSION_PATCH 1
+#define CATLIB_VERSION_MINOR 2
+#define CATLIB_VERSION_PATCH 0
 
 #if defined(_WIN32) || defined(__CYGWIN__)
     #ifdef CATLIB_BUILD
@@ -40,12 +40,18 @@ extern "C" {
 
 #define CAT_TERMINATE(msg) do\
 {\
-    fprintf(stderr, "CATLIB ERROR: %s\n", msg); \
+    fprintf(stderr, "[CATLIB ERROR]: %s\n", msg); \
     exit(EXIT_FAILURE); \
+}while(0)
+
+#define CAT_WARNING(msg) do\
+{\
+    fprintf(stderr, "[CATLIB WARNING]: %s\n", msg); \
 }while(0)
 
 typedef struct vec2 {float x, y;} vec2;
 typedef struct vec3 {float x, y, z;} vec3;
+typedef struct vec4 {float x, y, z, w;} vec4;
 typedef struct rect {float x, y, width, height;} rect;
 
 typedef struct color {float r, g, b, a;} color;
@@ -68,6 +74,8 @@ typedef struct texture
 
 typedef struct ma_sound ma_sound;
 typedef struct ma_engine ma_engine;
+typedef struct stbtt_fontinfo stbtt_fontinfo;
+typedef struct stbtt_packedchar stbtt_packedchar;
 
 typedef struct sound
 {
@@ -76,6 +84,19 @@ typedef struct sound
     bool loaded;
     bool playing;
 }sound;
+
+typedef struct font
+{
+    stbtt_fontinfo *fontInfo;
+    unsigned char *buffer;
+    float size;
+    int atlasWidth;
+    int atlasHeight;
+    unsigned char *atlasData;
+    unsigned int atlasTexture;
+    stbtt_packedchar *charData;
+    bool loaded;
+}font;
 
 typedef enum keyboard_key
 {
@@ -196,6 +217,7 @@ CATAPI void draw_circle_lines(vec2 pos, float rad, int segments, float thick, co
 CATAPI void draw_line(vec2 start, vec2 end, float thick, color col);
 CATAPI void draw_line_angled(vec2 start, vec2 end, float angle, float thick, color col);
 CATAPI void draw_pixel(vec2 pos, color col);
+CATAPI void draw_fps(font font, vec2 pos, float fontSize);
 
 //----------------
 //Camera
@@ -232,15 +254,27 @@ CATAPI color color_lerp(color start, color end, float amount);
 CATAPI shader load_shader(const char *vertPath, const char *fragPath);
 CATAPI void unload_shader(shader shader);
 CATAPI void use_shader(shader shader);
+CATAPI void set_shader_int(shader shader, const char *uniformName, int value);
+CATAPI void set_shader_float(shader shader, const char *uniformName, float value);
+CATAPI void set_shader_vec2(shader shader, const char *uniformName, vec2 value);
+CATAPI void set_shader_vec3(shader shader, const char *uniformName, vec3 value);
+CATAPI void set_shader_vec4(shader shader, const char *uniformName, vec4 value);
+CATAPI void set_shader_color(shader shader, const char *uniformName, color col);
+CATAPI void set_shader_texture(shader shader, const char *uniformName, texture tex, int unit);
+//TODO: add matrices
 
 //----------------
 //Textures
 //----------------
 CATAPI texture load_texture(const char *path);
+CATAPI texture get_texture_region(texture tex, vec2 pos, vec2 size);
 CATAPI void unload_texture(texture tex);
 CATAPI void draw_texture(texture texture, vec2 pos, vec2 size, color tint);
 CATAPI void draw_texture_centered(texture tex, vec2 pos, vec2 size, color tint);
-CATAPI void draw_texture_full(texture tex, vec2 pos, vec2 size, rect source, vec2 origin, float rotation, color tint);
+CATAPI void draw_texture_rotated(texture tex, vec2 pos, vec2 size, float rotation, color tint);
+//CATAPI void draw_texture_full(texture tex, vec2 pos, vec2 size, float rotation, color tint);
+CATAPI void export_texture(texture tex, const char *path);
+CATAPI texture get_screen_texture();
 
 //----------------
 
@@ -265,6 +299,14 @@ CATAPI void unload_sound(sound snd);
 CATAPI void play_sound(sound snd);
 CATAPI void stop_sound(sound snd);
 CATAPI void resume_sound(sound snd);
+CATAPI void set_sound_volume(sound snd, float volume);
+
+//----------------
+//Text
+//----------------
+CATAPI font load_font(const char *path);
+CATAPI void unload_font(font font);
+CATAPI void draw_text(font font, const char *text, vec2 pos, float fontSize, color col);
 
 #ifdef __cplusplus
 }

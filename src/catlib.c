@@ -13,6 +13,12 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
+
 #define MINIAUDIO_IMPLEMENTATION
 #include <miniaudio.h>
 
@@ -53,6 +59,13 @@ static double lastFrameTime = 0.0f;
 
 static ma_engine audioEngine = {0};
 
+static font currentFont = {0};
+static shader textShader = {0};
+static unsigned int textVAO = 0;
+static unsigned int textVBO = 0;
+static bool textInit = false;
+static font defaultFont = {0};
+
 static const char *textureVertShader = 
     "#version 330 core\n"
     "layout (location = 0) in vec2 aPos;\n"
@@ -91,6 +104,39 @@ static const char *textureFragShader =
     "{\n"
         "vec4 texColor = texture(textureSampler, TexCoord);\n"
         "FragColor = texColor * tintColor;\n"
+    "}\0";
+
+static const char *textVertShader = 
+    "#version 330 core\n"
+    "layout (location = 0) in vec2 aPos;\n"
+    "layout (location = 1) in vec2 aTexCoord;\n"
+    "out vec2 TexCoord;\n"
+    "uniform vec2 screenSize;\n"
+    "uniform vec2 camPos;\n"
+    "uniform float camZoom;\n"
+    "uniform vec2 position;\n"
+    "uniform vec2 scale;\n"
+    "void main()\n"
+    "{\n"
+        "vec2 worldPos = aPos * scale + position;\n"
+        "vec2 translated = worldPos - camPos;\n"
+        "vec2 zoomed = (translated - screenSize * 0.5) * camZoom + screenSize * 0.5;\n"
+        "vec2 ndcPos = (zoomed / screenSize) * 2.0 - 1.0;\n"
+        "ndcPos.y = -ndcPos.y;\n"
+        "gl_Position = vec4(ndcPos, 0.0, 1.0);\n"
+        "TexCoord = aTexCoord;\n"
+    "}\0";
+
+static const char *textFragShader = 
+    "#version 330 core\n"
+    "out vec4 FragColor;\n"
+    "in vec2 TexCoord;\n"
+    "uniform sampler2D textAtlas;\n"
+    "uniform vec4 textColor;\n"
+    "void main()\n"
+    "{\n"
+        "float alpha = texture(textAtlas, TexCoord).r;\n"
+        "FragColor = vec4(textColor.rgb, textColor.a * alpha);\n"
     "}\0";
 
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)
@@ -238,12 +284,12 @@ static void update_fps()
     }
 }
 
-CATAPI int get_fps()
+int get_fps()
 {
     return fps;
 }
 
-CATAPI float get_frame_time()
+float get_frame_time()
 {
     return deltaTime;
 }
@@ -324,7 +370,7 @@ static void init_drawing()
 {
     if (drawingInit) return;
 
-    const char* defaultVertShader = 
+    const char *defaultVertShader = 
         "#version 330 core\n"
         "layout (location = 0) in vec2 aPos;\n"
         "uniform vec2 screenSize;\n"
@@ -340,7 +386,7 @@ static void init_drawing()
             "gl_Position = vec4(ndcPos, 0.0, 1.0);\n"
         "}\0";
     
-    const char* defaultFragShader = 
+    const char *defaultFragShader = 
         "#version 330 core\n"
         "out vec4 FragColor;\n"
         "uniform vec4 color;\n"
@@ -432,10 +478,12 @@ void draw_shape(vec2 verts[], int vertCount, color col)
 
 void draw_shape_lines(vec2 verts[], int vertCount, float thick, color col)
 {
-    for (int i = 0; i < vertCount; i++)
+    for (int i = 0; i < vertCount - 1; i++)
     {
-        draw_line((vec2){verts[i].x, verts[i].y}, (vec2){verts[i + 1].x, verts[i + 1].y}, thick, col);
+        draw_line(verts[i], verts[i + 1], thick, col);
     }
+    
+    draw_line(verts[vertCount - 1], verts[0], thick, col);
 }
 
 void draw_triangle(vec2 v1, vec2 v2, vec2 v3, color col)
@@ -568,6 +616,14 @@ void draw_pixel(vec2 pos, color col)
     draw_rect(pos, (vec2){1, 1}, col);
 }
 
+void draw_fps(font font, vec2 pos, float fontSize)
+{
+    char buffer[16];
+    int fps = get_fps();
+    snprintf(buffer, sizeof(buffer), "FPS:%d", fps);
+    draw_text(font, buffer, pos, fontSize, COLOR_GREEN);
+}
+
 //----------------
 //Camera
 //----------------
@@ -654,6 +710,39 @@ void unload_shader(shader shader)
 void use_shader(shader shader)
 {
     glUseProgram(shader.id);
+}
+
+void set_shader_int(shader shader, const char *uniformName, int value)
+{
+    glUniform1i(glGetUniformLocation(shader.id, uniformName), value);
+}
+void set_shader_float(shader shader, const char *uniformName, float value)
+{
+    glUniform1f(glGetUniformLocation(shader.id, uniformName), value);
+}
+void set_shader_vec2(shader shader, const char *uniformName, vec2 value)
+{
+    glUniform2f(glGetUniformLocation(shader.id, uniformName), value.x, value.y);
+}
+void set_shader_vec3(shader shader, const char *uniformName, vec3 value)
+{
+    glUniform3f(glGetUniformLocation(shader.id, uniformName), value.x, value.y, value.z);
+}
+void set_shader_vec4(shader shader, const char *uniformName, vec4 value)
+{
+    glUniform4f(glGetUniformLocation(shader.id, uniformName), value.x, value.y, value.z, value.w);
+}
+void set_shader_color(shader shader, const char *uniformName, color col)
+{
+    color normalizedColor = color_to_float(col);
+    glUniform4f(glGetUniformLocation(shader.id, uniformName), normalizedColor.r, normalizedColor.g, normalizedColor.b, normalizedColor.a);
+}
+
+void set_shader_texture(shader shader, const char *uniformName, texture tex, int unit)
+{
+    glActiveTexture(GL_TEXTURE0 + unit);
+    glBindTexture(GL_TEXTURE_2D, tex.id);
+    glUniform1i(glGetUniformLocation(shader.id, uniformName), unit);
 }
 
 //----------------
@@ -750,6 +839,67 @@ texture load_texture(const char *path)
     return tex;
 }
 
+texture get_texture_region(texture tex, vec2 pos, vec2 size)
+{
+    init_texture();
+
+    texture region = {0};
+    region.width = size.x;
+    region.height = size.y;
+    region.channels = tex.channels;
+
+    glGenTextures(1, &region.id);
+    glBindTexture(GL_TEXTURE_2D, region.id);
+    
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    GLenum format;
+    if (tex.channels == 1) format = GL_RED;
+    else if (tex.channels == 3) format = GL_RGB;
+    else if (tex.channels == 4) format = GL_RGBA;
+    else format = GL_RGBA;
+
+    size_t dataSize = size.x * size.y * region.channels;
+    unsigned char *regionData = (unsigned char*)malloc(dataSize);
+
+    GLuint FBO;
+    glGenFramebuffers(1, &FBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex.id, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDeleteFramebuffers(1, &FBO);
+        free(regionData);
+        return region;
+    }
+
+    glViewport(0, 0, tex.width, tex.height);
+
+    int flipped = tex.height - (int)pos.y - (int)size.y;
+    
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels((int)pos.x, flipped, (int)size.x, (int)size.y, format, GL_UNSIGNED_BYTE, regionData);
+    glPixelStorei(GL_PACK_ALIGNMENT, 4);
+
+    glViewport(0, 0, windowWidth, windowHeight);
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, size.x, size.y, 0, format, GL_UNSIGNED_BYTE, regionData);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    
+    free(regionData);
+    
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &FBO);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    return region;
+}
 void unload_texture(texture tex)
 {
     if (tex.id != 0) glDeleteTextures(1, &tex.id);
@@ -757,11 +907,22 @@ void unload_texture(texture tex)
 
 void draw_texture(texture tex, vec2 pos, vec2 size, color tint)
 {
+    draw_texture_rotated(tex, pos, size, 0.0f, tint);
+}
+
+void draw_texture_centered(texture tex, vec2 pos, vec2 size, color tint)
+{
+    draw_texture(tex, (vec2){pos.x - size.x / 2.0f, pos.y - size.y / 2.0f}, size, tint);
+}
+
+void draw_texture_rotated(texture tex, vec2 pos, vec2 size, float rotation, color tint)
+{
     if (tex.id == 0) return;
         
     init_texture();
+
     use_shader(defaultTextureShader);
-    
+
     int screenSizeLoc = glGetUniformLocation(defaultTextureShader.id, "screenSize");
     glUniform2f(screenSizeLoc, (float)windowWidth, (float)windowHeight);
     
@@ -776,6 +937,9 @@ void draw_texture(texture tex, vec2 pos, vec2 size, color tint)
     
     int sizeLoc = glGetUniformLocation(defaultTextureShader.id, "size");
     glUniform2f(sizeLoc, size.x, size.y);
+
+    int rotationLoc = glGetUniformLocation(defaultTextureShader.id, "rotation");
+    glUniform1f(rotationLoc, rotation);
     
     color normalizedColor = color_to_float(tint);
     int tintLoc = glGetUniformLocation(defaultTextureShader.id, "tintColor");
@@ -807,9 +971,77 @@ void draw_texture(texture tex, vec2 pos, vec2 size, color tint)
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void draw_texture_centered(texture tex, vec2 pos, vec2 size, color tint)
+void export_texture(texture tex, const char *path)
 {
-    draw_texture(tex, (vec2){pos.x - size.x / 2.0f, pos.y - size.y / 2.0f}, size, tint);
+    if (tex.id == 0) return;
+    
+    size_t dataSize = tex.width * tex.height * tex.channels;
+    unsigned char *pixels = (unsigned char*)malloc(dataSize);
+    
+    GLuint FBO;
+    glGenFramebuffers(1, &FBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex.id, 0);
+    
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE)
+    {
+        GLenum format;
+        if (tex.channels == 1) format = GL_RED;
+        else if (tex.channels == 3) format = GL_RGB;
+        else if (tex.channels == 4) format = GL_RGBA;
+        else format = GL_RGBA;
+        
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        glReadPixels(0, 0, tex.width, tex.height, format, GL_UNSIGNED_BYTE, pixels);
+        glPixelStorei(GL_PACK_ALIGNMENT, 4);
+        
+        int rowSize = tex.width * tex.channels;
+        unsigned char *flipped = (unsigned char*)malloc(rowSize);
+
+        for (int y = 0; y < tex.height / 2; y++)
+        {
+            int topRow = y * rowSize;
+            int bottomRow = (tex.height - 1 - y) * rowSize;
+            
+            memcpy(flipped, pixels + topRow, rowSize);
+            memcpy(pixels + topRow, pixels + bottomRow, rowSize);
+            memcpy(pixels + bottomRow, flipped, rowSize);
+        }
+
+        free(flipped);
+    }
+        
+    stbi_write_png(path, tex.width, tex.height, tex.channels, pixels, tex.width * tex.channels);
+                
+    free(pixels);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &FBO);
+    
+    glViewport(0, 0, windowWidth, windowHeight);
+}
+
+texture get_screen_texture()
+{
+    init_texture();
+    
+    texture screenTex = {0};
+    screenTex.width = windowWidth;
+    screenTex.height = windowHeight;
+    screenTex.channels = 4;
+    
+    glGenTextures(1, &screenTex.id);
+    glBindTexture(GL_TEXTURE_2D, screenTex.id);
+    
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    
+    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, windowWidth, windowHeight, 0);
+    
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    return screenTex;
 }
 
 vec2 get_rect_center(rect rec)
@@ -926,4 +1158,203 @@ void resume_sound(sound snd)
     if (!snd.loaded) return; 
     ma_sound_start(snd.sound);
     snd.playing = true;
+}
+
+void set_sound_volume(sound snd, float volume)
+{
+    ma_sound_set_volume(snd.sound, volume);
+}
+
+//----------------
+//Text
+//----------------
+
+static void init_text()
+{
+    if (textInit) return;
+    
+    unsigned int vertShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertShader, 1, &textVertShader, NULL);
+    glCompileShader(vertShader);
+    
+    unsigned int fragShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragShader, 1, &textFragShader, NULL);
+    glCompileShader(fragShader);
+    
+    textShader.id = glCreateProgram();
+    glAttachShader(textShader.id, vertShader);
+    glAttachShader(textShader.id, fragShader);
+    glLinkProgram(textShader.id);
+    
+    glDeleteShader(vertShader);
+    glDeleteShader(fragShader);
+    
+    glGenVertexArrays(1, &textVAO);
+    glGenBuffers(1, &textVBO);
+    
+    glBindVertexArray(textVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+    
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    
+    glBindVertexArray(0);
+    
+    textInit = true;
+}
+
+font load_font(const char *path)
+{
+    init_text();
+    
+    font font = {0};
+    
+    FILE *fontFile = fopen(path, "rb");
+    if (!fontFile) return font;
+    
+    fseek(fontFile, 0, SEEK_END);
+    long fileSize = ftell(fontFile);
+    fseek(fontFile, 0, SEEK_SET);
+    
+    font.buffer = (unsigned char*)malloc(fileSize);
+    fread(font.buffer, 1, fileSize, fontFile);
+    fclose(fontFile);
+
+    font.fontInfo = (stbtt_fontinfo*)malloc(sizeof(stbtt_fontinfo));
+    
+    stbtt_InitFont(font.fontInfo, font.buffer, stbtt_GetFontOffsetForIndex(font.buffer, 0));
+    
+    font.atlasWidth = 1024;
+    font.atlasHeight = 1024;
+    font.atlasData = (unsigned char*)malloc(font.atlasWidth * font.atlasHeight * sizeof(unsigned char));
+    font.size = 64;
+    
+    font.charData = (stbtt_packedchar*)malloc(sizeof(stbtt_packedchar) * 128);
+    
+    stbtt_pack_context context;
+    stbtt_PackBegin(&context, font.atlasData, font.atlasWidth, font.atlasHeight, 0, 1, NULL);
+    stbtt_PackSetOversampling(&context, 2, 2);
+    stbtt_PackFontRange(&context, font.buffer, 0, font.size, 32, 95, font.charData + 32);
+    stbtt_PackEnd(&context);
+    
+    glGenTextures(1, &font.atlasTexture);
+    glBindTexture(GL_TEXTURE_2D, font.atlasTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, font.atlasWidth, font.atlasHeight, 0, GL_RED, GL_UNSIGNED_BYTE, font.atlasData);
+    
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    
+    font.loaded = true;
+    return font;
+}
+
+void unload_font(font font)
+{
+    if (!font.loaded) return;
+    
+    if (font.atlasTexture) 
+    {
+        glDeleteTextures(1, &font.atlasTexture);
+    }
+    
+    if (font.charData) free(font.charData);
+    if (font.fontInfo) free(font.fontInfo);
+    if (font.buffer) free(font.buffer);
+    if (font.atlasData) free(font.atlasData);
+    
+    if (defaultFont.buffer == font.buffer)
+    {
+        memset(&defaultFont, 0, sizeof(font));
+    }
+}
+
+void draw_text(font font, const char *text, vec2 pos, float fontSize, color col)
+{
+    if (!font.loaded || !text) return;
+
+    init_text();
+    use_shader(textShader);
+
+    float scale = fontSize / font.size;
+    
+    int screenSizeLoc = glGetUniformLocation(textShader.id, "screenSize");
+    glUniform2f(screenSizeLoc, (float)windowWidth, (float)windowHeight);
+    
+    int camPosLoc = glGetUniformLocation(textShader.id, "camPos");
+    glUniform2f(camPosLoc, currentCam.pos.x, currentCam.pos.y);
+    
+    int camZoomLoc = glGetUniformLocation(textShader.id, "camZoom");
+    glUniform1f(camZoomLoc, currentCam.zoom);
+    
+    int scaleLoc = glGetUniformLocation(textShader.id, "scale");
+    glUniform2f(scaleLoc, 1.0f, 1.0f);
+    
+    color normalizedColor = color_to_float(col);
+    int colorLoc = glGetUniformLocation(textShader.id, "textColor");
+    glUniform4f(colorLoc, normalizedColor.r, normalizedColor.g, normalizedColor.b, normalizedColor.a);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, font.atlasTexture);
+    glUniform1i(glGetUniformLocation(textShader.id, "textAtlas"), 0);
+
+    glBindVertexArray(textVAO);
+
+    float x = pos.x;
+    float y = pos.y;
+
+    while (*text)
+    {
+        if (*text == '\n')
+        {
+            x = pos.x;
+            y += font.size * scale;
+        }
+
+        else
+        {
+            stbtt_packedchar *c = &font.charData[*text];
+            
+            float x0 = x + c->xoff * scale;
+            float y0 = y + c->yoff * scale;
+            float x1 = x0 + (c->xoff2 - c->xoff) * scale;
+            float y1 = y0 + (c->yoff2 - c->yoff) * scale;
+            
+            float s0 = (float)c->x0 / font.atlasWidth;
+            float t0 = (float)c->y0 / font.atlasHeight;
+            float s1 = (float)c->x1 / font.atlasWidth;
+            float t1 = (float)c->y1 / font.atlasHeight;
+            
+            float verts[24] =
+            {
+                x0, y0, s0, t0,
+                x1, y0, s1, t0,
+                x1, y1, s1, t1,
+                
+                x0, y0, s0, t0,
+                x1, y1, s1, t1,
+                x0, y1, s0, t1
+            };
+            
+            glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+            glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
+            
+            int posLoc = glGetUniformLocation(textShader.id, "position");
+            glUniform2f(posLoc, 0.0f, 0.0f);
+            
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            
+            x += c->xadvance * scale;
+        }
+
+        text++;
+    }
+    
+    glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }

@@ -1,5 +1,22 @@
+Version 0.2
+    -Added text rendering support
+    -Added vec4 struct
+    -Functions:
+        -Added draw_text, draw_fps, load_font, unload_font functions
+        -Added get_texture_region function
+        -Added export_texture function
+        -Added set_sound_volume function
+        -Added vec2_dir function
+        -Added get_screen_texture function
+        -Added functions to set shader uniforms
+        -Added draw_texture_rotated function
+    -Bugs:
+        -Fixed draw_shape_lines function not drawing lines between first and last vertices
+
 Version 0.1.1
-    -Added draw_pixel function
-    -Fixed a bug in texture filtering mode that caused blurry images
-    -Added angle_to_vec2 and vec2_to_angle functions
-    -Fixed bugs in vector math
+    -Functions:
+        -Added draw_pixel function
+        -Added angle_to_vec2 and vec2_to_angle functions
+    -Bugs:
+        -Fixed a bug in texture filtering mode that caused blurry images
+        -Fixed bugs in vector math
