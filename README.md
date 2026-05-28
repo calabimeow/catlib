@@ -11,6 +11,8 @@ Features:
 
 -Sound support
 
+-Text support
+
 -Open sourced
 
 Basic program example:
