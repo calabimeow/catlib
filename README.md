@@ -11,8 +11,6 @@ Features:
 
 -Sound support
 
--Custom shaders support
-
 -Open sourced
 
 Basic program example:
